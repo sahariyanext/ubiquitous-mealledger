@@ -1,6 +1,6 @@
 // src/components/ui/checkbox.tsx
 // Placeholder stub for the shadcn/ui "checkbox" component.
-// Restore the real implementation from your Lovable export or
+// Restore the real implementation from the component library if needed.
 // regenerate via: npx shadcn-ui@latest add checkbox
 
 export function Checkbox() {
