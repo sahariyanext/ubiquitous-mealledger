@@ -7,11 +7,12 @@ import {
   loadEntries,
   monthLabel,
   monthStats,
-  saveEntries,
+  saveEntry,
   type MealMap,
 } from "@/lib/meals";
 import { downloadMonthPdf } from "@/lib/pdf";
 import { useInstall } from "@/lib/install";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -37,6 +38,7 @@ function Home() {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (installReady && !installed) {
@@ -45,10 +47,37 @@ function Home() {
   }, [installReady, installed, navigate]);
 
   useEffect(() => {
-    setEntries(loadEntries());
-    setToday(new Date());
-    setReady(true);
-  }, []);
+    let active = true;
+
+    async function loadUserEntries() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        navigate({ to: "/", replace: true });
+        return;
+      }
+
+      try {
+        const nextEntries = await loadEntries(session.user.id);
+        if (active) {
+          setUserId(session.user.id);
+          setEntries(nextEntries);
+          setToday(new Date());
+          setReady(true);
+        }
+      } catch (error) {
+        console.error(error);
+        if (active) setToast("Could not load your meals");
+      }
+    }
+
+    void loadUserEntries();
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
 
   useEffect(() => {
     if (!toast) return;
@@ -65,7 +94,14 @@ function Home() {
       const next = { ...prev };
       if (entry === null) delete next[key];
       else next[key] = entry;
-      saveEntries(next);
+
+      if (userId) {
+        void saveEntry(userId, key, entry).catch((error) => {
+          console.error(error);
+          setToast("Could not save your meal");
+        });
+      }
+
       return next;
     });
   }
@@ -93,18 +129,23 @@ function Home() {
     <div className="min-h-screen bg-background font-sans text-foreground antialiased">
       <div className="mx-auto max-w-[420px] px-6 pb-32 pt-6">
         <header className="flex animate-rise items-center justify-between pb-6">
-          <span className="font-display text-[17px] font-semibold italic">
-            Meal Ledger
-          </span>
+          <span className="font-display text-[17px] font-semibold italic">Meal Ledger</span>
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-faint">
             {monthLabel(today)}
           </span>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate({ to: "/", replace: true });
+            }}
+            className="font-mono text-[11px] uppercase tracking-wide text-faint transition-colors hover:text-primary"
+          >
+            Sign out
+          </button>
         </header>
 
         <section className="animate-rise pb-7 [animation-delay:70ms]">
-          <p className="mb-2 font-mono text-[11px] tracking-[0.2em] text-faint">
-            MONTH TOTAL
-          </p>
+          <p className="mb-2 font-mono text-[11px] tracking-[0.2em] text-faint">MONTH TOTAL</p>
           <div className="font-display text-[68px] font-semibold leading-none tracking-tight tabular-nums">
             {formatBDT(stats.sum)}
           </div>
@@ -148,13 +189,7 @@ function Home() {
                 aria-label="Today's meal cost"
                 placeholder="0"
                 maxLength={9}
-                value={
-                  editing === todayKey
-                    ? draft
-                    : todayEntry
-                      ? String(todayEntry.cost)
-                      : ""
-                }
+                value={editing === todayKey ? draft : todayEntry ? String(todayEntry.cost) : ""}
                 onFocus={() => {
                   setEditing(todayKey);
                   setDraft(todayEntry ? String(todayEntry.cost) : "");
@@ -192,12 +227,8 @@ function Home() {
         {/* Day list */}
         <section className="animate-rise [animation-delay:220ms]">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-mono text-[11px] tracking-[0.2em] text-faint">
-              THIS MONTH
-            </h2>
-            <span className="font-mono text-[11px] text-faint">
-              TAP TO EDIT
-            </span>
+            <h2 className="font-mono text-[11px] tracking-[0.2em] text-faint">THIS MONTH</h2>
+            <span className="font-mono text-[11px] text-faint">TAP TO EDIT</span>
           </div>
           <div className="border-t border-border">
             {days.map((d, i) => {
@@ -221,9 +252,7 @@ function Home() {
                       })}
                     </span>
                     <span className="text-[11px] text-faint">
-                      {isToday
-                        ? "today"
-                        : d.toLocaleDateString("en-US", { weekday: "short" })}
+                      {isToday ? "today" : d.toLocaleDateString("en-US", { weekday: "short" })}
                     </span>
                   </span>
 
@@ -255,9 +284,7 @@ function Home() {
                         onClick={() => {
                           if (isToday) return;
                           setEditing(key);
-                          setDraft(
-                            entry && !entry.skipped ? String(entry.cost) : "",
-                          );
+                          setDraft(entry && !entry.skipped ? String(entry.cost) : "");
                         }}
                         className="font-mono text-[15px] tabular-nums transition-colors hover:text-primary"
                       >

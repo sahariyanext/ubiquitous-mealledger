@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { AuthForm } from "@/components/auth-form";
 import { isStandalone, useInstall } from "@/lib/install";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -75,6 +77,12 @@ function Landing() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate({ to: "/home", replace: true });
+    });
+  }, [navigate]);
+
   async function handleInstall() {
     const result = await promptInstall();
     if (result === "ios") {
@@ -89,9 +97,7 @@ function Landing() {
     <div className="min-h-screen bg-background font-sans text-foreground antialiased">
       <div className="mx-auto max-w-[420px] px-6 pb-16 pt-8">
         <header className="flex animate-rise items-center justify-between pb-10">
-          <span className="font-display text-[17px] font-semibold italic">
-            Meal Ledger
-          </span>
+          <span className="font-display text-[17px] font-semibold italic">Meal Ledger</span>
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-faint">
             est. 2026
           </span>
@@ -102,14 +108,12 @@ function Landing() {
             DAILY MEAL COST TRACKER
           </p>
           <h1 className="font-display text-[44px] font-semibold leading-[1.05] tracking-tight">
-            Know what your meals{" "}
-            <span className="italic text-primary">really</span> cost.
+            Know what your meals <span className="italic text-primary">really</span> cost.
           </h1>
           <p className="mt-5 text-[15px] leading-relaxed text-body">
-            Meal Ledger is a tiny, private app for tracking daily meal
-            expenses in Taka. Log a day in one tap, mark days you didn't eat,
-            fix mistakes anytime, and download a monthly total as PDF. Your
-            data never leaves your phone.
+            Meal Ledger is a tiny, private app for tracking daily meal expenses in Taka. Log a day
+            in one tap, mark days you didn't eat, fix mistakes anytime, and download a monthly total
+            as PDF. Your ledger syncs securely across your devices.
           </p>
         </section>
 
@@ -123,9 +127,7 @@ function Landing() {
                 <span className="block font-display text-[15px] font-semibold italic">
                   App installed
                 </span>
-                <span className="block text-[12px] opacity-70">
-                  You're all set — jump back in
-                </span>
+                <span className="block text-[12px] opacity-70">You're all set — jump back in</span>
               </span>
               <span className="rounded-full bg-background px-4 py-2 font-display text-[13px] font-semibold italic text-foreground">
                 Open app →
@@ -154,31 +156,25 @@ function Landing() {
               </p>
               {iosHelp && (
                 <p className="mt-3 rounded-[14px] border border-border bg-card px-4 py-3 text-[13px] leading-relaxed text-body">
-                  On iPhone: tap the{" "}
-                  <span className="font-semibold text-foreground">Share</span>{" "}
+                  On iPhone: tap the <span className="font-semibold text-foreground">Share</span>{" "}
                   button (square with arrow) in Safari, then choose{" "}
-                  <span className="font-semibold text-foreground">
-                    “Add to Home Screen”
-                  </span>
-                  . Then open Meal Ledger from your home screen.
+                  <span className="font-semibold text-foreground">“Add to Home Screen”</span>. Then
+                  open Meal Ledger from your home screen.
                 </p>
               )}
               {manualHelp && (
                 <p className="mt-3 rounded-[14px] border border-border bg-card px-4 py-3 text-[13px] leading-relaxed text-body">
                   Open your browser menu and choose{" "}
-                  <span className="font-semibold text-foreground">
-                    “Install app”
-                  </span>{" "}
-                  or{" "}
-                  <span className="font-semibold text-foreground">
-                    “Add to Home screen”
-                  </span>
-                  , then open Meal Ledger from your home screen.
+                  <span className="font-semibold text-foreground">“Install app”</span> or{" "}
+                  <span className="font-semibold text-foreground">“Add to Home screen”</span>, then
+                  open Meal Ledger from your home screen.
                 </p>
               )}
             </>
           )}
         </section>
+
+        <AuthForm />
 
         <section className="animate-rise pb-10 [animation-delay:220ms]">
           <p className="mb-3 font-mono text-[11px] tracking-[0.2em] text-faint">
@@ -187,21 +183,15 @@ function Landing() {
           <div className="border-t border-border">
             {FEATURES.map((f) => (
               <div key={f.title} className="border-b border-border py-4">
-                <h2 className="font-display text-[16px] font-semibold italic">
-                  {f.title}
-                </h2>
-                <p className="mt-1 text-[13px] leading-relaxed text-body">
-                  {f.body}
-                </p>
+                <h2 className="font-display text-[16px] font-semibold italic">{f.title}</h2>
+                <p className="mt-1 text-[13px] leading-relaxed text-body">{f.body}</p>
               </div>
             ))}
           </div>
         </section>
 
         <footer className="animate-rise [animation-delay:300ms]">
-          <p className="mb-3 font-mono text-[11px] tracking-[0.2em] text-faint">
-            FOLLOW
-          </p>
+          <p className="mb-3 font-mono text-[11px] tracking-[0.2em] text-faint">FOLLOW</p>
           <div className="flex flex-wrap gap-2">
             {SOCIALS.map((s) => (
               <a
@@ -216,7 +206,7 @@ function Landing() {
             ))}
           </div>
           <p className="mt-8 text-[11px] text-faint">
-            Meal Ledger — your data stays on your device.
+            Meal Ledger — your private ledger, wherever you are.
           </p>
         </footer>
       </div>

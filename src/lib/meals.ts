@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 export type MealEntry = {
   /** cost in BDT; 0 when skipped */
   cost: number;
@@ -5,8 +7,6 @@ export type MealEntry = {
 };
 
 export type MealMap = Record<string, MealEntry>;
-
-const STORAGE_KEY = "meal-ledger-v1";
 
 export function dateKey(d: Date): string {
   const y = d.getFullYear();
@@ -21,22 +21,47 @@ export function monthKey(d: Date): string {
   return `${y}-${m}`;
 }
 
-export function loadEntries(): MealMap {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? (parsed as MealMap) : {};
-  } catch {
-    return {};
-  }
+export async function loadEntries(userId: string): Promise<MealMap> {
+  const { data, error } = await supabase
+    .from("meal_entries")
+    .select("meal_date, cost, skipped")
+    .eq("user_id", userId);
+
+  if (error) throw error;
+
+  return Object.fromEntries(
+    (data ?? []).map((entry) => [
+      entry.meal_date,
+      { cost: Number(entry.cost), skipped: entry.skipped },
+    ]),
+  );
 }
 
-export function saveEntries(map: MealMap) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // storage full or unavailable — ignore
+export async function saveEntry(
+  userId: string,
+  key: string,
+  entry: MealEntry | null,
+): Promise<void> {
+  const query = supabase.from("meal_entries");
+
+  if (entry === null) {
+    const { error } = await query.delete().eq("user_id", userId).eq("meal_date", key);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await query.upsert(
+    {
+      user_id: userId,
+      meal_date: key,
+      cost: entry.cost,
+      skipped: entry.skipped,
+    },
+    { onConflict: "user_id,meal_date" },
+  );
+
+  if (error) {
+    throw error;
   }
 }
 
