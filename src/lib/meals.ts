@@ -8,6 +8,8 @@ export type MealEntry = {
 
 export type MealMap = Record<string, MealEntry>;
 
+const LEGACY_STORAGE_KEY = "meal-ledger-v1";
+
 export function dateKey(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -35,6 +37,35 @@ export async function loadEntries(userId: string): Promise<MealMap> {
       { cost: Number(entry.cost), skipped: entry.skipped },
     ]),
   );
+}
+
+export async function migrateLocalEntries(userId: string): Promise<MealMap | null> {
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as MealMap;
+    if (!parsed || typeof parsed !== "object" || Object.keys(parsed).length === 0) {
+      return null;
+    }
+
+    const rows = Object.entries(parsed).map(([mealDate, entry]) => ({
+      user_id: userId,
+      meal_date: mealDate,
+      cost: entry.cost,
+      skipped: entry.skipped,
+    }));
+    const { error } = await supabase
+      .from("meal_entries")
+      .upsert(rows, { onConflict: "user_id,meal_date" });
+    if (error) throw error;
+
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return parsed;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 }
 
 export async function saveEntry(

@@ -5,6 +5,7 @@ import {
   daysUpToToday,
   formatBDT,
   loadEntries,
+  migrateLocalEntries,
   monthLabel,
   monthStats,
   saveEntry,
@@ -60,7 +61,10 @@ function Home() {
       }
 
       try {
-        const nextEntries = await loadEntries(session.user.id);
+        let nextEntries = await loadEntries(session.user.id);
+        if (Object.keys(nextEntries).length === 0) {
+          nextEntries = (await migrateLocalEntries(session.user.id)) ?? nextEntries;
+        }
         if (active) {
           setUserId(session.user.id);
           setEntries(nextEntries);
