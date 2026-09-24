@@ -12,7 +12,6 @@ import {
   type MealMap,
 } from "@/lib/meals";
 import { downloadMonthPdf } from "@/lib/pdf";
-import { useInstall } from "@/lib/install";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/home")({
@@ -32,7 +31,6 @@ export const Route = createFileRoute("/home")({
 
 function Home() {
   const navigate = useNavigate();
-  const { installed, ready: installReady } = useInstall();
   const [entries, setEntries] = useState<MealMap>({});
   const [ready, setReady] = useState(false);
   const [today, setToday] = useState<Date>(() => new Date());
@@ -40,12 +38,6 @@ function Home() {
   const [draft, setDraft] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (installReady && !installed) {
-      navigate({ to: "/", replace: true });
-    }
-  }, [installReady, installed, navigate]);
 
   useEffect(() => {
     let active = true;
@@ -125,7 +117,7 @@ function Home() {
 
   const todayEntry = entries[todayKey];
 
-  if (!ready || !installReady || !installed) {
+  if (!ready) {
     return <div className="min-h-screen bg-background" />;
   }
 
