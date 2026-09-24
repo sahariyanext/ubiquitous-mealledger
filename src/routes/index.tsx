@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
-import { isStandalone, useInstall } from "@/lib/install";
+import { useInstall } from "@/lib/install";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/")({
@@ -69,13 +69,6 @@ function Landing() {
   const { installed, ready, promptInstall } = useInstall();
   const [iosHelp, setIosHelp] = useState(false);
   const [manualHelp, setManualHelp] = useState(false);
-
-  // Installed apps open straight to the tracker — skip the landing page.
-  useEffect(() => {
-    if (isStandalone()) {
-      navigate({ to: "/home", replace: true });
-    }
-  }, [navigate]);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data: { session } }) => {
